@@ -14,10 +14,6 @@
 using namespace std;
 namespace fs = filesystem; // Alias for filesystem
 
-template<typename Base, typename T>
-inline bool instanceof(const T *ptr) {
-   return dynamic_cast<const Base*>(ptr) != nullptr;
-}
 
 void reiniciarArquivoPlanejamento(string pasta) {
     fs::path arquivo = pasta+"/"+"1-planejamento.csv"; // Path to the file
@@ -168,6 +164,9 @@ public:
     string getTelefone() const { return telefone; }
     string getEndereco() const { return endereco; }
     bool getisLoja()const {return false;}
+    virtual bool isPessoaFisica() const { return false; }
+    virtual bool isPessoaJuridica() const { return false; }
+    virtual bool isLoja() const { return false; }
 
     void setId(const string& id) { this->id = id; }
     void setTipo(const string& tipo) { this->tipo = tipo; }
@@ -196,6 +195,7 @@ public:
     double getSalario() const { return salario; }
     double getGastosMensais() const { return gastosMensais; }
     bool getisLoja() const { return false; }
+    bool isPessoaFisica() const override { return true; }
 
     void setCpf(const string& cpf) { this->cpf = cpf; }
     void setDataNascimento(const string& dataNascimento) { this->dataNascimento = dataNascimento; }
@@ -215,6 +215,7 @@ public:
     string getCnpj() const { return cnpj; }
 
     bool getisLoja() const { return false; }
+    bool isPessoaJuridica() const override { return true; }
 
     void setCnpj(const string& cnpj) { this->cnpj = cnpj; }
 };
@@ -231,6 +232,7 @@ public:
     string getCnpj() const { return cnpj; }
 
     void setCnpj(const string& cnpj) { this->cnpj = cnpj; }
+    bool isLoja() const override { return true; }
 
     bool getisLoja() const { return true; }
 };
@@ -392,9 +394,9 @@ public:
 // VERIFY
 
 int getTipoPrioridade(Pessoa* p) {
-    if ( dynamic_cast<PessoaFisica*>((p))) {
+    if (p->isPessoaFisica()){
         return 1; // Highest priority for PF
-    } else if ( dynamic_cast<Loja*>((p))) {
+    } else if (p->isLoja()) {
         return 3; // Lowest priority for Loja
     } else {
         return 2; // Medium priority for PJ (not Loja)
@@ -674,9 +676,8 @@ void gerarRelatorioPrestadores(const vector<Pessoa*>& pessoas,
     for (auto& p : pessoas) {
         double totalRecebido = 0.0;
 
-        if (dynamic_cast<PessoaFisica*>(p)) {
+        if (p->isPessoaFisica()) {
             PessoaFisica* pf = dynamic_cast<PessoaFisica*>(p);
-
 
             //Sum values from tasks for PF
             for (const auto& t : tarefas) {
@@ -687,7 +688,7 @@ void gerarRelatorioPrestadores(const vector<Pessoa*>& pessoas,
             if (totalRecebido > 0) {
                 pessoaValor[p] = totalRecebido;
             }
-        } else if (dynamic_cast<PessoaJuridica*>(p) && !p->getisLoja()) {
+        } else if (p->isPessoaJuridica()) {
             PessoaJuridica* pj = dynamic_cast<PessoaJuridica*>(p);
 
             // Sum values from tasks for PJ (not Loja)
@@ -697,7 +698,7 @@ void gerarRelatorioPrestadores(const vector<Pessoa*>& pessoas,
                 }
             }
             pessoaValor[p] = totalRecebido;
-        } else if (dynamic_cast<Loja*>(p)) {
+        } else if (p->isLoja()) {
             Loja* lj = dynamic_cast<Loja*>(p);
 
             // Sum values from purchases for Loja
@@ -741,7 +742,7 @@ void gerarRelatorioPrestadores(const vector<Pessoa*>& pessoas,
     for (const auto& entry : listaOrdenada) {
         Pessoa* p = entry.first;
         double valor = entry.second;
-        string tipo = (dynamic_cast<PessoaFisica*>(p)) ? "PF" : (dynamic_cast<Loja*>(p)) ? "Loja" : "PJ";
+        string tipo = (p->isPessoaFisica()) ? "PF" : (p->isLoja()) ? "Loja" : "PJ";
         file << tipo << ";"
              << p->getNome() << ";"
              << formatCurrencyBr(valor) << "\n";
@@ -802,6 +803,9 @@ void acrescentarPlanejamentoCSV(PessoaFisica* p1, PessoaFisica* p2,
     file << balances.str() << "\n";
 
 }
+
+
+
 
 void process_files(vector<Pessoa*>& pessoas, vector<Lar>& lares, vector<Tarefa>& tarefas,
                    vector<Casamento>& casamentos, vector<Festa>& festas, vector<Compra>& compras,
@@ -1029,7 +1033,33 @@ void gerarEstatisticasCasaisCSV(const vector<Casal>& casais,
     cout << "Arquivo '3-estatisticas-casais.csv' gerado com sucesso!" << endl;
 }
 
+/// VERIFICACOES
 
+// void verificaIdRepetido(const vector<Pessoa*>& pessoas, const vector<Lar>& lares,
+//                         const vector<Tarefa>& tarefas, const vector<Casamento>& casamentos,
+//                         const vector<Festa>& festas, const vector<Compra>& compras) {
+//     // Check for duplicate IDs in each list
+//     auto checkDuplicateIds = [](const auto& entities, const string& entityName) {
+//         set<string> ids;
+//         for (const auto& entity : entities) {
+//             string id = entity.getId();
+//             if (ids.count(id)) {
+//                 cout << "ID repetido: " << id << " na classe " << entityName << endl;
+//             } else {
+//                 ids.insert(id);
+//             }
+//         }
+//     };
+
+//     checkDuplicateIds(pessoas, "Pessoa");
+//     checkDuplicateIds(lares, "Lar");
+//     checkDuplicateIds(tarefas, "Tarefa");
+//     checkDuplicateIds(casamentos, "Casamento");
+//     checkDuplicateIds(festas, "Festa");
+//     checkDuplicateIds(compras, "Compra");
+// }
+
+/// FIM VERIFICACOES
 
 
 
@@ -1085,12 +1115,13 @@ int main(int argc, char* argv[]) {
 
     reiniciarArquivoPlanejamento(folderPath);
 
+    // executarVerificacoes(pessoas, lares, tarefas, casamentos, festas, compras);
+
     process_files(list_pessoa, list_lar, list_tarefa, list_casamento, list_festa, list_compra, paresCpf, casais, gastos, festasConvidados, folderPath);
 
     gerarRelatorioPrestadores(list_pessoa, list_tarefa, list_compra, folderPath);
 
     gerarEstatisticasCasaisCSV(casais, gastos, festasConvidados, folderPath);
-
 
     return 0;
 }
