@@ -163,7 +163,6 @@ public:
     string getNome() const { return nome; }
     string getTelefone() const { return telefone; }
     string getEndereco() const { return endereco; }
-    bool getisLoja()const {return false;}
     virtual bool isPessoaFisica() const { return false; }
     virtual bool isPessoaJuridica() const { return false; }
     virtual bool isLoja() const { return false; }
@@ -194,7 +193,6 @@ public:
     double getDinheiroGuardado() const { return dinheiroGuardado; }
     double getSalario() const { return salario; }
     double getGastosMensais() const { return gastosMensais; }
-    bool getisLoja() const { return false; }
     bool isPessoaFisica() const override { return true; }
 
     void setCpf(const string& cpf) { this->cpf = cpf; }
@@ -214,7 +212,6 @@ public:
 
     string getCnpj() const { return cnpj; }
 
-    bool getisLoja() const { return false; }
     bool isPessoaJuridica() const override { return true; }
 
     void setCnpj(const string& cnpj) { this->cnpj = cnpj; }
@@ -234,7 +231,6 @@ public:
     void setCnpj(const string& cnpj) { this->cnpj = cnpj; }
     bool isLoja() const override { return true; }
 
-    bool getisLoja() const { return true; }
 };
 
 class Casamento {
