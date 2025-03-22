@@ -10,6 +10,7 @@
 #include <algorithm> // For remove
 #include <utility> // for pair
 #include <numeric> // for accumulate
+#include <set> // for set
 
 using namespace std;
 namespace fs = filesystem; // Alias for filesystem
@@ -662,6 +663,15 @@ PessoaFisica* findPessoaByCpf(vector<Pessoa*>& pessoas, const string& cpf) {
     return nullptr;
 }
 
+Pessoa* findPessoaById(const vector<Pessoa*>& pessoas, const string& id) {
+    for (Pessoa* p : pessoas) {
+        if (p->getId() == id) {
+            return p;
+        }
+    }
+    return nullptr;
+}
+
 void gerarRelatorioPrestadores(const vector<Pessoa*>& pessoas,
                                const vector<Tarefa>& tarefas,
                                const vector<Compra>& compras,
@@ -1031,29 +1041,135 @@ void gerarEstatisticasCasaisCSV(const vector<Casal>& casais,
 
 /// VERIFICACOES
 
-// void verificaIdRepetido(const vector<Pessoa*>& pessoas, const vector<Lar>& lares,
-//                         const vector<Tarefa>& tarefas, const vector<Casamento>& casamentos,
-//                         const vector<Festa>& festas, const vector<Compra>& compras) {
-//     // Check for duplicate IDs in each list
-//     auto checkDuplicateIds = [](const auto& entities, const string& entityName) {
-//         set<string> ids;
-//         for (const auto& entity : entities) {
-//             string id = entity.getId();
-//             if (ids.count(id)) {
-//                 cout << "ID repetido: " << id << " na classe " << entityName << endl;
-//             } else {
-//                 ids.insert(id);
-//             }
-//         }
-//     };
+void verificaCPFRepetido(const vector<Pessoa*>& pessoas) {
+    map<string, string> cpfToId;
+    for (Pessoa* p : pessoas) {
+        if (p->isPessoaFisica()) {
+            PessoaFisica* pf = dynamic_cast<PessoaFisica*>(p);
+            string cpf = pf->getCpf();
+            if (cpfToId.count(cpf)) {
+                cout << "O CPF " << cpf << " da Pessoa " << pf->getId() << " é repetido." << endl;
+            } else {
+                cpfToId[cpf] = pf->getId();
+            }
+        }
+    }
+}
 
-//     checkDuplicateIds(pessoas, "Pessoa");
-//     checkDuplicateIds(lares, "Lar");
-//     checkDuplicateIds(tarefas, "Tarefa");
-//     checkDuplicateIds(casamentos, "Casamento");
-//     checkDuplicateIds(festas, "Festa");
-//     checkDuplicateIds(compras, "Compra");
-// }
+void verificaCNPJ(const vector<Pessoa*>& pessoas) {
+    map<string, string> cnpjToId;
+    for (Pessoa* p : pessoas) {
+        if (p->isPessoaJuridica()) {
+            PessoaJuridica* pj = dynamic_cast<PessoaJuridica*>(p);
+            string cnpj = pj->getCnpj();
+            if (cnpjToId.count(cnpj)) {
+                cout << "O CNPJ " << cnpj << " da Pessoa " << pj->getId() << " é repetido." << endl;
+            } else {
+                cnpjToId[cnpj] = pj->getId();
+            }
+        }else if (p->isLoja()){
+            Loja* lj = dynamic_cast<Loja*>(p);
+            string cnpj = lj->getCnpj();
+            if (cnpjToId.count(cnpj)) {
+                cout << "O CNPJ " << cnpj << " da Pessoa " << lj->getId() << " é repetido." << endl;
+            } else {
+                cnpjToId[cnpj] = lj->getId();
+            }
+        }
+    }
+}
+
+void verificaLar(const vector<Pessoa*>& pessoas, const vector<Lar>& lares) {
+    for (const Lar& lar : lares) {
+        string id1 = lar.getId1();
+        string id2 = lar.getId2();
+
+        if (!findPessoaById(pessoas, id1)) {
+            cout << "ID(s) de Pessoa " << id1 << " não cadastrado no Lar de ID " << lar.getIdLar() << endl;
+        }
+        if (!findPessoaById(pessoas, id2)) {
+            cout << "ID(s) de Pessoa " << id2 << " não cadastrado no Lar de ID " << lar.getIdLar() << endl;
+        }
+    }
+}
+
+// 5 - Verifica Casamento com IDs de Pessoa não cadastrados
+void verificaCasamento(const vector<Pessoa*>& pessoas, const vector<Casamento>& casamentos) {
+    for (const Casamento& casamento : casamentos) {
+        string id1 = casamento.getId1();
+        string id2 = casamento.getId2();
+
+        if (!findPessoaById(pessoas, id1)) {
+            cout << "ID(s) de Pessoa " << id1 << " não cadastrado no Casamento de ID " << casamento.getIdCasamento() << endl;
+        }
+        if (!findPessoaById(pessoas, id2)) {
+            cout << "ID(s) de Pessoa " << id2 << " não cadastrado no Casamento de ID " << casamento.getIdCasamento() << endl;
+        }
+    }
+}
+
+void verificaTarefaLar(const vector<Lar>& lares, const vector<Tarefa>& tarefas) {
+    for (const Tarefa& tarefa : tarefas) {
+        string idLar = tarefa.getIdLar();
+        if (none_of(lares.begin(), lares.end(), [&](const Lar& lar) { return lar.getIdLar() == idLar; })) {
+            cout << "ID(s) de Lar " << idLar << " não cadastrado na Tarefa de ID " << tarefa.getIdTarefa() << endl;
+        }
+    }
+}
+
+void verificaTarefaPrestador(const vector<Pessoa*>& pessoas, const vector<Tarefa>& tarefas) {
+    for (const Tarefa& tarefa : tarefas) {
+        string idPrestador = tarefa.getIdPrestador();
+        if (!findPessoaById(pessoas, idPrestador)) {
+            cout << "ID(s) de Prestador de Serviço " << idPrestador << " não cadastrado na Tarefa de ID " << tarefa.getIdTarefa() << endl;
+        }
+    }
+}
+
+void verificaFestaCasamento(const vector<Casamento>& casamentos, const vector<Festa>& festas) {
+    for (const Festa& festa : festas) {
+        string idCasamento = festa.getIdCasamento();
+        if (none_of(casamentos.begin(), casamentos.end(), [&](const Casamento& casamento) { return casamento.getIdCasamento() == idCasamento; })) {
+            cout << "ID(s) de Casamento " << idCasamento << " não cadastrado na Festa de ID " << festa.getId() << endl;
+        }
+    }
+}
+
+void verificaCompraTarefa(const vector<Tarefa>& tarefas, const vector<Compra>& compras) {
+    for (const Compra& compra : compras) {
+        string idTarefa = compra.getIdTarefa();
+        if (none_of(tarefas.begin(), tarefas.end(), [&](const Tarefa& tarefa) { return tarefa.getIdTarefa() == idTarefa; })) {
+            cout << "ID(s) de Tarefa " << idTarefa << " não cadastrado na Compra de ID " << compra.getId() << endl;
+        }
+    }
+}
+
+void verificaCompraLoja(const vector<Pessoa*>& pessoas, const vector<Compra>& compras) {
+    for (const Compra& compra : compras) {
+        string idLoja = compra.getIdLoja();
+        Pessoa* p = findPessoaById(pessoas, idLoja);
+        if (!p) {
+            cout << "ID(s) de Loja " << idLoja << " não cadastrado na Compra de ID " << compra.getId() << endl;
+        } else if (p->isPessoaJuridica() && !p->isLoja()) {
+            cout << "ID " << idLoja << " da Compra de ID " << compra.getId() << " não se refere a uma Loja, mas a uma PJ." << endl;
+        }
+    }
+}
+
+void executarVerificacoes(const vector<Pessoa*>& pessoas, const vector<Lar>& lares,
+                          const vector<Tarefa>& tarefas, const vector<Casamento>& casamentos,
+                          const vector<Festa>& festas, const vector<Compra>& compras) {
+    // verificaIdRepetido(pessoas, lares, tarefas, casamentos, festas, compras);
+    verificaCPFRepetido(pessoas);
+    verificaCNPJ(pessoas);
+    verificaLar(pessoas, lares);
+    verificaCasamento(pessoas, casamentos);
+    verificaTarefaLar(lares, tarefas);
+    verificaTarefaPrestador(pessoas, tarefas);
+    verificaFestaCasamento(casamentos, festas);
+    verificaCompraTarefa(tarefas, compras);
+    verificaCompraLoja(pessoas, compras);
+}
 
 /// FIM VERIFICACOES
 
@@ -1088,17 +1204,6 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Now you can access the vectors in the main function
-    // For example, you can print the size of each vector
-    cout << "Number of pessoas: " << list_pessoa.size() << endl;
-    cout << "Number of festas: " << list_festa.size() << endl;
-    cout << "Number of casamentos: " << list_casamento.size() << endl;
-    cout << "Number of lares: " << list_lar.size() << endl;
-    cout << "Number of tarefas: " << list_tarefa.size() << endl;
-    cout << "Number of compras: " << list_compra.size() << endl;
-
-
-    cout<< "Pares de CPF"<<endl;
 
     vector<string> paresCpf;
 
@@ -1111,7 +1216,8 @@ int main(int argc, char* argv[]) {
 
     reiniciarArquivoPlanejamento(folderPath);
 
-    // executarVerificacoes(pessoas, lares, tarefas, casamentos, festas, compras);
+
+    executarVerificacoes(list_pessoa, list_lar, list_tarefa, list_casamento, list_festa, list_compra);
 
     process_files(list_pessoa, list_lar, list_tarefa, list_casamento, list_festa, list_compra, paresCpf, casais, gastos, festasConvidados, folderPath);
 
