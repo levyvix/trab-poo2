@@ -3,14 +3,9 @@
 
 ```bash
 g++ src/main.cpp
-
-./a.out <caminho/para/arquivo.csv>
+./a.out <caminho/para/arquivos>
 ```
 
-### Exemplos
+## Exemplo
 
-
-```bash
-~/trab-poo2$ g++ src/main.cpp
-~/trab-poo2$ ./a.out data
-```
+![img](Screenshot_6.png)

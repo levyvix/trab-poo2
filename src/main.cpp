@@ -147,6 +147,7 @@ private:
     string telefone;
     string endereco;
 
+
 public:
     Pessoa(string id, string tipo, string nome, string telefone, string endereco)
         : id(id), tipo(tipo), nome(nome), telefone(telefone), endereco(endereco) {}
