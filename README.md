@@ -1,7 +1,16 @@
-Get started by customizing your environment (defined in the .idx/dev.nix file) with the tools and IDE extensions you'll need for your project!
-
-Learn more at https://developers.google.com/idx/guides/customize-idx-env
+## Como rodar
 
 
+```bash
 g++ src/main.cpp
-./a.out data
+
+./a.out <caminho/para/arquivo.csv>
+```
+
+### Exemplos
+
+
+```bash
+~/trab-poo2$ g++ src/main.cpp
+~/trab-poo2$ ./a.out data
+```

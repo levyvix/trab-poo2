@@ -37,7 +37,6 @@ private:
     int year;
     int month;
 
-
 public:
     YearMonth(int year, int month) : year(year), month(month) {}
 
