@@ -11,24 +11,24 @@
 #include <utility> // for pair
 #include <numeric> // for accumulate
 #include <set> // for set
+#include <exception>
+#include <format>
 
 using namespace std;
-namespace fs = filesystem; // Alias for filesystem
+namespace fs = filesystem; 
 
+
+string pasta;
+
+void gerarEstatisticasCasaisCSVVazio(string pasta);
+void gerarRelatorioPrestadoresVazio(string pasta);
+void gerarRelatorioPlanejamentoVazio(const string& pasta);
 
 void reiniciarArquivoPlanejamento(string pasta) {
-    fs::path arquivo = pasta+"/"+"1-planejamento.csv"; // Path to the file
+    fs::path arquivo = pasta+"/"+"1-planejamento.csv";
 
-    // Check if the file exists
     if (fs::exists(arquivo)) {
-        // Attempt to delete the file
-        if (fs::remove(arquivo)) {
-            cout << "Arquivo '1-planejamento.csv' foi deletado para ser recriado." << endl;
-        } else {
-            cerr << "Erro ao tentar deletar o arquivo '1-planejamento.csv'." << endl;
-        }
-    } else {
-        cout << "Arquivo '1-planejamento.csv' não existe." << endl;
+        fs::remove(arquivo);
     }
 }
 
@@ -75,13 +75,11 @@ string formatYearMonth(const YearMonth& ym) {
 
 string formatCurrencyBr(double value) {
     stringstream ss;
-    ss << fixed << setprecision(2) << value; // Format with 2 decimal places
+    ss << fixed << setprecision(2) << value; 
     string result = ss.str();
 
-    // Remove thousands separators (commas)
     result.erase(remove(result.begin(), result.end(), ','), result.end());
 
-    // Replace decimal point with comma
     size_t dot = result.find('.');
     if (dot != string::npos) {
         result[dot] = ',';
@@ -92,7 +90,6 @@ string formatCurrencyBr(double value) {
 
 
 
-// Define the Expense class
 class Expense {
 public:
     YearMonth start;
@@ -104,7 +101,6 @@ public:
 };
 
 YearMonth parseDateToYearMonth(const string& date) {
-    // Assuming date format is "DD/MM/YYYY"
     int year = stoi(date.substr(6, 4));
     int month = stoi(date.substr(3, 2));
     return YearMonth(year, month);
@@ -121,7 +117,6 @@ private:
 
 public:
     Casal(string nome1, string nome2) {
-        // Ensure nome1 is lexically smaller than nome2
         if (nome2 < nome1) {
             this->nome1 = nome2;
             this->nome2 = nome1;
@@ -475,144 +470,273 @@ string trim(const string& str) {
 
 void processPessoasCSV(const string& filePath, vector<Pessoa*>& list_pessoa) {
     ifstream file(filePath);
-    if (!file.is_open()) {
-        cerr << "Error opening file: " << filePath << endl;
-        return;
-    }
 
-    string line;
-    while (getline(file, line)) {
-        vector<string> columns = split(line, ';');
+    try{
+        if (!file.is_open()) {
+            gerarEstatisticasCasaisCSVVazio(pasta);
+            gerarRelatorioPrestadoresVazio(pasta);
+            gerarRelatorioPlanejamentoVazio(pasta);
+            throw runtime_error("Erro de I/O");
+        }
 
-        string id = columns[0];
-        string tipo = columns[1];
-        string nome = columns[2];
-        string telefone = columns[3];
-        string endereco = columns[4];
+        string line;
+        while (getline(file, line)) {
+            vector<string> columns = split(line, ';');
 
-        if (tipo == "F") {
-            string cpf = columns[5];
-            string data_nascimento = columns[6];
-            double dinheiro_guardado = stod(columns[7]);
-            double salario = stod(columns[8]);
-            double gastos_mensais = stod(columns[9]);
-            list_pessoa.push_back(new PessoaFisica(id, tipo, nome, telefone, endereco, cpf, data_nascimento, dinheiro_guardado, salario, gastos_mensais));
-        } else {
-            string cnpj = columns[5];
-            if (tipo == "J"){
+            string id = columns[0];
+            string tipo = columns[1];
+            string nome = columns[2];
+            string telefone = columns[3];
+            string endereco = columns[4];
 
-                list_pessoa.push_back(new PessoaJuridica(id, tipo, nome, telefone, endereco, cnpj));
-            }else{
-                list_pessoa.push_back(new Loja(id, tipo, nome, telefone, endereco, cnpj));
-                
+            if (tipo == "F") {
+                    string cpf = columns[5];
+                    string data_nascimento = columns[6];
+                    double dinheiro_guardado = stod(columns[7]);
+                    double salario = stod(columns[8]);
+                    double gastos_mensais = stod(columns[9]);
+                    list_pessoa.push_back(new PessoaFisica(id, tipo, nome, telefone, endereco, cpf, data_nascimento, dinheiro_guardado, salario, gastos_mensais));
+            } else {
+                string cnpj = columns[5];
+                if (tipo == "J"){
+
+                    list_pessoa.push_back(new PessoaJuridica(id, tipo, nome, telefone, endereco, cnpj));
+                }else{
+                    list_pessoa.push_back(new Loja(id, tipo, nome, telefone, endereco, cnpj));
+                    
+                }
             }
         }
+    }catch (const ios_base::failure& e) {
+        gerarEstatisticasCasaisCSVVazio(pasta);
+        gerarRelatorioPrestadoresVazio(pasta);
+        gerarRelatorioPlanejamentoVazio(pasta);
+        throw runtime_error("Erro de I/O");
+    }catch (const std::invalid_argument& e)
+    {
+        gerarEstatisticasCasaisCSVVazio(pasta);
+        gerarRelatorioPrestadoresVazio(pasta);
+        gerarRelatorioPlanejamentoVazio(pasta);
+        throw runtime_error("Erro de I/O");
     }
+    catch (const exception& e) {
+        gerarEstatisticasCasaisCSVVazio(pasta);
+        gerarRelatorioPrestadoresVazio(pasta);
+        gerarRelatorioPlanejamentoVazio(pasta);
+        throw runtime_error("Erro de I/O");
+    }
+    
 }
 
 void processFestasCSV(const string& filePath, vector<Festa>& list_festa) {
     ifstream file(filePath);
-    if (!file.is_open()) {
-        cerr << "Error opening file: " << filePath << endl;
-        return;
+    try{
+        if (!file.is_open()) {
+            gerarEstatisticasCasaisCSVVazio(pasta);
+            gerarRelatorioPrestadoresVazio(pasta);
+            gerarRelatorioPlanejamentoVazio(pasta);
+            throw runtime_error("Erro de I/O");
+        }
+
+        string line;
+        while (getline(file, line)) {
+            vector<string> columns = split(line, ';');
+
+            string id = columns[0];
+            string idCasamento = columns[1];
+            string local = columns[2];
+            string data = columns[3];
+            string hora = columns[4];
+            double valorPago = stod(columns[5]);
+            int numParcelas = stoi(columns[6]);
+            vector<string> convidados = split(columns[7], ',');
+            Festa festa(id, idCasamento, local, data, hora, valorPago, numParcelas, convidados);
+            list_festa.push_back(festa);
+        }
+    }catch (const ios_base::failure& e) {
+        gerarEstatisticasCasaisCSVVazio(pasta);
+        gerarRelatorioPrestadoresVazio(pasta);
+        gerarRelatorioPlanejamentoVazio(pasta);
+        throw runtime_error("Erro de I/O");
+    }catch (const std::invalid_argument& e)
+    {
+        gerarEstatisticasCasaisCSVVazio(pasta);
+        gerarRelatorioPrestadoresVazio(pasta);
+        gerarRelatorioPlanejamentoVazio(pasta);
+        throw runtime_error("Erro de I/O");
     }
-
-    string line;
-    while (getline(file, line)) {
-        vector<string> columns = split(line, ';');
-
-        string id = columns[0];
-        string idCasamento = columns[1];
-        string local = columns[2];
-        string data = columns[3];
-        string hora = columns[4];
-        double valorPago = stod(columns[5]);
-        int numParcelas = stoi(columns[6]);
-        vector<string> convidados = split(columns[7], ',');
-        Festa festa(id, idCasamento, local, data, hora, valorPago, numParcelas, convidados);
-        list_festa.push_back(festa);
+    catch (const exception& e) {
+        gerarEstatisticasCasaisCSVVazio(pasta);
+        gerarRelatorioPrestadoresVazio(pasta);
+        gerarRelatorioPlanejamentoVazio(pasta);
+        throw runtime_error("Erro de I/O");
     }
 }
 
 void processCasamentosCSV(const string& filePath, vector<Casamento>& list_casamento) {
     ifstream file(filePath);
-    if (!file.is_open()) {
-        cerr << "Error opening file: " << filePath << endl;
-        return;
+
+    try{
+        if (!file.is_open()) {
+            gerarEstatisticasCasaisCSVVazio(pasta);
+            gerarRelatorioPrestadoresVazio(pasta);
+            gerarRelatorioPlanejamentoVazio(pasta);
+            throw runtime_error("Erro de I/O");
+        }
+
+        string line;
+        while (getline(file, line)) {
+            vector<string> columns = split(line, ';');
+
+            string idCasamento = columns[0];
+            string id1 = columns[1];
+            string id2 = columns[2];
+            string data = columns[3];
+            string hora = columns[4];
+            string local = columns[5];
+            Casamento casamento(idCasamento, id1, id2, data, hora, local);
+            list_casamento.push_back(casamento);
+        }
+    }catch (const ios_base::failure& e) {
+        gerarEstatisticasCasaisCSVVazio(pasta);
+        gerarRelatorioPrestadoresVazio(pasta);
+        gerarRelatorioPlanejamentoVazio(pasta);
+        throw runtime_error("Erro de I/O");
+    }catch (const std::invalid_argument& e)
+    {
+        gerarEstatisticasCasaisCSVVazio(pasta);
+        gerarRelatorioPrestadoresVazio(pasta);
+        gerarRelatorioPlanejamentoVazio(pasta);
+        throw runtime_error("Erro de I/O");
     }
-
-    string line;
-    while (getline(file, line)) {
-        vector<string> columns = split(line, ';');
-
-        string idCasamento = columns[0];
-        string id1 = columns[1];
-        string id2 = columns[2];
-        string data = columns[3];
-        string hora = columns[4];
-        string local = columns[5];
-        Casamento casamento(idCasamento, id1, id2, data, hora, local);
-        list_casamento.push_back(casamento);
+    catch (const exception& e) {
+        gerarEstatisticasCasaisCSVVazio(pasta);
+        gerarRelatorioPrestadoresVazio(pasta);
+        gerarRelatorioPlanejamentoVazio(pasta);
+        throw runtime_error("Erro de I/O");
     }
 }
 
 void processLarCSV(const string& filePath, vector<Lar>& list_lar) {
     ifstream file(filePath);
-    if (!file.is_open()) {
-        cerr << "Error opening file: " << filePath << endl;
-        return;
+    try{
+        if (!file.is_open()) {
+            gerarEstatisticasCasaisCSVVazio(pasta);
+            gerarRelatorioPrestadoresVazio(pasta);
+            gerarRelatorioPlanejamentoVazio(pasta);
+            throw runtime_error("Erro de I/O");
+        }
+
+        string line;
+        while (getline(file, line)) {
+            vector<string> columns = split(line, ';');
+
+            string id_lar = columns[0];
+            string id1 = columns[1];
+            string id2 = columns[2];
+            string rua = columns[3];
+            int numero = stoi(columns[4]);
+            string complemento = columns[5];
+            Lar lar(id_lar, id1, id2, rua, numero, complemento);
+            list_lar.push_back(lar);
+        }
+    }catch (const ios_base::failure& e) {
+        gerarEstatisticasCasaisCSVVazio(pasta);
+        gerarRelatorioPrestadoresVazio(pasta);
+        gerarRelatorioPlanejamentoVazio(pasta);
+        throw runtime_error("Erro de I/O");
+    }catch (const std::invalid_argument& e)
+    {
+        gerarEstatisticasCasaisCSVVazio(pasta);
+        gerarRelatorioPrestadoresVazio(pasta);
+        gerarRelatorioPlanejamentoVazio(pasta);
+        throw runtime_error("Erro de I/O");
     }
-
-    string line;
-    while (getline(file, line)) {
-        vector<string> columns = split(line, ';');
-
-        string id_lar = columns[0];
-        string id1 = columns[1];
-        string id2 = columns[2];
-        string rua = columns[3];
-        int numero = stoi(columns[4]);
-        string complemento = columns[5];
-        Lar lar(id_lar, id1, id2, rua, numero, complemento);
-        list_lar.push_back(lar);
+    catch (const exception& e) {
+        gerarEstatisticasCasaisCSVVazio(pasta);
+        gerarRelatorioPrestadoresVazio(pasta);
+        gerarRelatorioPlanejamentoVazio(pasta);
+        throw runtime_error("Erro de I/O");
     }
 }
 
 void processTarefaCSV(const string& filePath, vector<Tarefa>& list_tarefa) {
     ifstream file(filePath);
-    if (!file.is_open()) {
-        cerr << "Error opening file: " << filePath << endl;
-        return;
+    try{
+        if (!file.is_open()) {
+            gerarEstatisticasCasaisCSVVazio(pasta);
+            gerarRelatorioPrestadoresVazio(pasta);
+            gerarRelatorioPlanejamentoVazio(pasta);
+            throw runtime_error("Erro de I/O");
+        }
+
+        string line;
+        while (getline(file, line)) {
+            vector<string> columns = split(line, ';');
+
+            string idTarefa = columns[0];
+            string idLar = columns[1];
+            string idPrestador = columns[2];
+            string dataInicio = columns[3];
+            int prazoEntrega = stoi(columns[4]);
+            double valorPrestador = stod(columns[5]);
+            int numParcelas = stoi(columns[6]);
+            Tarefa tarefa(idTarefa, idLar, idPrestador, dataInicio, prazoEntrega, valorPrestador, numParcelas);
+            list_tarefa.push_back(tarefa);
+        }
+    }catch (const ios_base::failure& e) {
+        gerarEstatisticasCasaisCSVVazio(pasta);
+        gerarRelatorioPrestadoresVazio(pasta);
+        gerarRelatorioPlanejamentoVazio(pasta);
+        throw runtime_error("Erro de I/O");
+    }catch (const std::invalid_argument& e)
+    {
+        gerarEstatisticasCasaisCSVVazio(pasta);
+        gerarRelatorioPrestadoresVazio(pasta);
+        gerarRelatorioPlanejamentoVazio(pasta);
+        throw runtime_error("Erro de I/O");
     }
-
-    string line;
-    while (getline(file, line)) {
-        vector<string> columns = split(line, ';');
-
-        string idTarefa = columns[0];
-        string idLar = columns[1];
-        string idPrestador = columns[2];
-        string dataInicio = columns[3];
-        int prazoEntrega = stoi(columns[4]);
-        double valorPrestador = stod(columns[5]);
-        int numParcelas = stoi(columns[6]);
-        Tarefa tarefa(idTarefa, idLar, idPrestador, dataInicio, prazoEntrega, valorPrestador, numParcelas);
-        list_tarefa.push_back(tarefa);
+    catch (const exception& e) {
+        gerarEstatisticasCasaisCSVVazio(pasta);
+        gerarRelatorioPrestadoresVazio(pasta);
+        gerarRelatorioPlanejamentoVazio(pasta);
+        throw runtime_error("Erro de I/O");
     }
 }
 
 void processComprasCSV(const string& filePath, vector<Compra>& list_compra) {
     ifstream file(filePath);
-    if (!file.is_open()) {
-        cerr << "Error opening file: " << filePath << endl;
-        return;
+    try{
+        if (!file.is_open()) {
+            gerarEstatisticasCasaisCSVVazio(pasta);
+            gerarRelatorioPrestadoresVazio(pasta);
+            gerarRelatorioPlanejamentoVazio(pasta);
+            throw runtime_error("Erro de I/O");
+        }
+
+        string line;
+        while (getline(file, line)) {
+            vector<string> columns = split(line, ';');
+
+            list_compra.push_back(Compra(columns[0], columns[1], columns[2], columns[3], stoi(columns[4]), stod(columns[5]), stoi(columns[6])));
+        }
+    }catch (const ios_base::failure& e) {
+        gerarEstatisticasCasaisCSVVazio(pasta);
+        gerarRelatorioPrestadoresVazio(pasta);
+        gerarRelatorioPlanejamentoVazio(pasta);
+        throw runtime_error("Erro de I/O");
+    }catch (const std::invalid_argument& e)
+    {
+        gerarEstatisticasCasaisCSVVazio(pasta);
+        gerarRelatorioPrestadoresVazio(pasta);
+        gerarRelatorioPlanejamentoVazio(pasta);
+        throw runtime_error("Erro de I/O");
     }
-
-    string line;
-    while (getline(file, line)) {
-        vector<string> columns = split(line, ';');
-
-        list_compra.push_back(Compra(columns[0], columns[1], columns[2], columns[3], stoi(columns[4]), stod(columns[5]), stoi(columns[6])));
+    catch (const exception& e) {
+        gerarEstatisticasCasaisCSVVazio(pasta);
+        gerarRelatorioPrestadoresVazio(pasta);
+        gerarRelatorioPlanejamentoVazio(pasta);
+        throw runtime_error("Erro de I/O");
     }
 }
 
@@ -631,8 +755,6 @@ void processCSVFile(const string& filePath, vector<Pessoa*>& list_pessoa, vector
         processTarefaCSV(filePath, list_tarefa);
     } else if (nome_arquivo == "compras.csv") {
         processComprasCSV(filePath, list_compra);
-    } else {
-        cout << "Arquivo não suportado: " << nome_arquivo << endl;
     }
 }
 
@@ -670,6 +792,16 @@ Pessoa* findPessoaById(const vector<Pessoa*>& pessoas, const string& id) {
         }
     }
     return nullptr;
+}
+
+void gerarRelatorioPrestadoresVazio(string pasta){
+    string caminhoCompleto = pasta + "/2-estatisticas-prestadores.csv";
+    ofstream file(caminhoCompleto);
+
+    if (!file.is_open()) {
+        cerr << "Erro ao criar o arquivo: " << caminhoCompleto << endl;
+        return;
+    }
 }
 
 void gerarRelatorioPrestadores(const vector<Pessoa*>& pessoas,
@@ -754,7 +886,6 @@ void gerarRelatorioPrestadores(const vector<Pessoa*>& pessoas,
              << formatCurrencyBr(valor) << "\n";
     }
 
-    cout << "Arquivo '2-estatisticas-prestadores.csv' gerado com sucesso!" << endl;
 }
 
 void acrescentarPlanejamentoCSV(PessoaFisica* p1, PessoaFisica* p2, 
@@ -811,6 +942,30 @@ void acrescentarPlanejamentoCSV(PessoaFisica* p1, PessoaFisica* p2,
 }
 
 
+void gerarRelatorioPlanejamentoVazio(const string& pasta) {
+    string caminhoCompleto = pasta + "/1-planejamento.csv";
+
+    ofstream file(caminhoCompleto);
+
+    if (!file.is_open()) {
+        cerr << "Erro ao criar o arquivo: " << caminhoCompleto << endl;
+        return;
+    }
+
+}
+
+
+void gerarEstatisticasCasaisCSVVazio(string pasta){
+    string caminhoCompleto = pasta + "/3-estatisticas-casais.csv";
+    ofstream file(caminhoCompleto);
+    if (!file.is_open()) {
+        cerr << "Erro ao abrir arquivo para escrita." << endl;
+        return;
+    }
+
+}
+
+
 
 
 void process_files(vector<Pessoa*>& pessoas, vector<Lar>& lares, vector<Tarefa>& tarefas,
@@ -828,8 +983,10 @@ void process_files(vector<Pessoa*>& pessoas, vector<Lar>& lares, vector<Tarefa>&
         cpf2 = trim(cpfs[1]);
 
         if (cpf1.empty() || cpf2.empty()) {
-            cout << "Entrada inválida: " << parCPF << cpf1 << ", " << cpf2 << endl;
-            continue;
+            gerarEstatisticasCasaisCSVVazio(pasta);
+            gerarRelatorioPrestadoresVazio(pasta);
+            gerarRelatorioPlanejamentoVazio(pasta);
+            throw runtime_error("Erro de I/O");
         }
 
 
@@ -837,8 +994,10 @@ void process_files(vector<Pessoa*>& pessoas, vector<Lar>& lares, vector<Tarefa>&
         PessoaFisica* p2 = findPessoaByCpf(pessoas, cpf2);
 
         if (!p1 || !p2) {
-            cout << "CPF não encontrado: " << cpf1 << " ou " << cpf2 << endl;
-            continue;
+            gerarEstatisticasCasaisCSVVazio(pasta);
+            gerarRelatorioPrestadoresVazio(pasta);
+            gerarRelatorioPlanejamentoVazio(pasta);
+            throw runtime_error("Erro de I/O");
         }
 
         string nome1 = p1->getNome();
@@ -1036,7 +1195,6 @@ void gerarEstatisticasCasaisCSV(const vector<Casal>& casais,
              << festas << "\n";
     }
 
-    cout << "Arquivo '3-estatisticas-casais.csv' gerado com sucesso!" << endl;
 }
 
 /// VERIFICACOES
@@ -1049,6 +1207,11 @@ void verificaCPFRepetido(const vector<Pessoa*>& pessoas) {
             string cpf = pf->getCpf();
             if (cpfToId.count(cpf)) {
                 cout << "O CPF " << cpf << " da Pessoa " << pf->getId() << " é repetido." << endl;
+
+                gerarEstatisticasCasaisCSVVazio(pasta);
+                gerarRelatorioPrestadoresVazio(pasta);
+                gerarRelatorioPlanejamentoVazio(pasta);
+                throw runtime_error("Erro de I/O");
             } else {
                 cpfToId[cpf] = pf->getId();
             }
@@ -1064,6 +1227,10 @@ void verificaCNPJ(const vector<Pessoa*>& pessoas) {
             string cnpj = pj->getCnpj();
             if (cnpjToId.count(cnpj)) {
                 cout << "O CNPJ " << cnpj << " da Pessoa " << pj->getId() << " é repetido." << endl;
+                gerarEstatisticasCasaisCSVVazio(pasta);
+                gerarRelatorioPrestadoresVazio(pasta);
+                gerarRelatorioPlanejamentoVazio(pasta);
+                throw runtime_error("Erro de I/O");
             } else {
                 cnpjToId[cnpj] = pj->getId();
             }
@@ -1086,9 +1253,17 @@ void verificaLar(const vector<Pessoa*>& pessoas, const vector<Lar>& lares) {
 
         if (!findPessoaById(pessoas, id1)) {
             cout << "ID(s) de Pessoa " << id1 << " não cadastrado no Lar de ID " << lar.getIdLar() << endl;
+            gerarEstatisticasCasaisCSVVazio(pasta);
+            gerarRelatorioPrestadoresVazio(pasta);
+            gerarRelatorioPlanejamentoVazio(pasta);
+            throw runtime_error("Erro de I/O");
         }
         if (!findPessoaById(pessoas, id2)) {
             cout << "ID(s) de Pessoa " << id2 << " não cadastrado no Lar de ID " << lar.getIdLar() << endl;
+            gerarEstatisticasCasaisCSVVazio(pasta);
+            gerarRelatorioPrestadoresVazio(pasta);
+            gerarRelatorioPlanejamentoVazio(pasta);
+            throw runtime_error("Erro de I/O");
         }
     }
 }
@@ -1101,9 +1276,17 @@ void verificaCasamento(const vector<Pessoa*>& pessoas, const vector<Casamento>& 
 
         if (!findPessoaById(pessoas, id1)) {
             cout << "ID(s) de Pessoa " << id1 << " não cadastrado no Casamento de ID " << casamento.getIdCasamento() << endl;
+            gerarEstatisticasCasaisCSVVazio(pasta);
+            gerarRelatorioPrestadoresVazio(pasta);
+            gerarRelatorioPlanejamentoVazio(pasta);
+            throw runtime_error("Erro de I/O");
         }
         if (!findPessoaById(pessoas, id2)) {
             cout << "ID(s) de Pessoa " << id2 << " não cadastrado no Casamento de ID " << casamento.getIdCasamento() << endl;
+            gerarEstatisticasCasaisCSVVazio(pasta);
+            gerarRelatorioPrestadoresVazio(pasta);
+            gerarRelatorioPlanejamentoVazio(pasta);
+            throw runtime_error("Erro de I/O");
         }
     }
 }
@@ -1113,6 +1296,11 @@ void verificaTarefaLar(const vector<Lar>& lares, const vector<Tarefa>& tarefas) 
         string idLar = tarefa.getIdLar();
         if (none_of(lares.begin(), lares.end(), [&](const Lar& lar) { return lar.getIdLar() == idLar; })) {
             cout << "ID(s) de Lar " << idLar << " não cadastrado na Tarefa de ID " << tarefa.getIdTarefa() << endl;
+
+            gerarEstatisticasCasaisCSVVazio(pasta);
+            gerarRelatorioPrestadoresVazio(pasta);
+            gerarRelatorioPlanejamentoVazio(pasta);
+            throw runtime_error("Erro de I/O");
         }
     }
 }
@@ -1122,6 +1310,10 @@ void verificaTarefaPrestador(const vector<Pessoa*>& pessoas, const vector<Tarefa
         string idPrestador = tarefa.getIdPrestador();
         if (!findPessoaById(pessoas, idPrestador)) {
             cout << "ID(s) de Prestador de Serviço " << idPrestador << " não cadastrado na Tarefa de ID " << tarefa.getIdTarefa() << endl;
+            gerarEstatisticasCasaisCSVVazio(pasta);
+            gerarRelatorioPrestadoresVazio(pasta);
+            gerarRelatorioPlanejamentoVazio(pasta);
+            throw runtime_error("Erro de I/O");
         }
     }
 }
@@ -1131,6 +1323,10 @@ void verificaFestaCasamento(const vector<Casamento>& casamentos, const vector<Fe
         string idCasamento = festa.getIdCasamento();
         if (none_of(casamentos.begin(), casamentos.end(), [&](const Casamento& casamento) { return casamento.getIdCasamento() == idCasamento; })) {
             cout << "ID(s) de Casamento " << idCasamento << " não cadastrado na Festa de ID " << festa.getId() << endl;
+            gerarEstatisticasCasaisCSVVazio(pasta);
+            gerarRelatorioPrestadoresVazio(pasta);
+            gerarRelatorioPlanejamentoVazio(pasta);
+            throw runtime_error("Erro de I/O");
         }
     }
 }
@@ -1140,6 +1336,10 @@ void verificaCompraTarefa(const vector<Tarefa>& tarefas, const vector<Compra>& c
         string idTarefa = compra.getIdTarefa();
         if (none_of(tarefas.begin(), tarefas.end(), [&](const Tarefa& tarefa) { return tarefa.getIdTarefa() == idTarefa; })) {
             cout << "ID(s) de Tarefa " << idTarefa << " não cadastrado na Compra de ID " << compra.getId() << endl;
+            gerarEstatisticasCasaisCSVVazio(pasta);
+            gerarRelatorioPrestadoresVazio(pasta);
+            gerarRelatorioPlanejamentoVazio(pasta);
+            throw runtime_error("Erro de I/O");
         }
     }
 }
@@ -1150,8 +1350,95 @@ void verificaCompraLoja(const vector<Pessoa*>& pessoas, const vector<Compra>& co
         Pessoa* p = findPessoaById(pessoas, idLoja);
         if (!p) {
             cout << "ID(s) de Loja " << idLoja << " não cadastrado na Compra de ID " << compra.getId() << endl;
+            gerarEstatisticasCasaisCSVVazio(pasta);
+            gerarRelatorioPrestadoresVazio(pasta);
+            gerarRelatorioPlanejamentoVazio(pasta);
+            throw runtime_error("Erro de I/O");
         } else if (p->isPessoaJuridica() && !p->isLoja()) {
             cout << "ID " << idLoja << " da Compra de ID " << compra.getId() << " não se refere a uma Loja, mas a uma PJ." << endl;
+            gerarEstatisticasCasaisCSVVazio(pasta);
+            gerarRelatorioPrestadoresVazio(pasta);
+            gerarRelatorioPlanejamentoVazio(pasta);
+            throw runtime_error("Erro de I/O");
+        }
+    }
+}
+
+void verificaIdRepetido(const vector<Pessoa*>& pessoas, const vector<Lar>& lares,
+                        const vector<Tarefa>& tarefas, const vector<Casamento>& casamentos,
+                        const vector<Festa>& festas, const vector<Compra>& compras) {
+    for (size_t i = 0; i < pessoas.size(); i++) {
+        for (size_t j = i + 1; j < pessoas.size(); j++) {
+            if (pessoas[i]->getId() == pessoas[j]->getId()) {
+                cout << "ID repetido: " << pessoas[i]->getId() << " na classe Pessoa" << endl;
+                gerarEstatisticasCasaisCSVVazio(pasta);
+                gerarRelatorioPrestadoresVazio(pasta);
+                gerarRelatorioPlanejamentoVazio(pasta);
+                throw runtime_error("Erro de I/O");
+            }
+        }
+    }
+
+    for (size_t i = 0; i < lares.size(); i++) {
+        for (size_t j = i + 1; j < lares.size(); j++) {
+            if (lares[i].getIdLar() == lares[j].getIdLar()) {
+                cout << "ID repetido: " << lares[i].getIdLar() << " na classe Lar" << endl;
+
+                gerarEstatisticasCasaisCSVVazio(pasta);
+                gerarRelatorioPrestadoresVazio(pasta);
+                gerarRelatorioPlanejamentoVazio(pasta);
+                throw runtime_error("Erro de I/O");
+            }
+        }
+    }
+
+    for (size_t i = 0; i < tarefas.size(); i++) {
+        for (size_t j = i + 1; j < tarefas.size(); j++) {
+            if (tarefas[i].getIdTarefa() == tarefas[j].getIdTarefa()) {
+                cout << "ID repetido: " << tarefas[i].getIdTarefa() << " na classe Tarefa" << endl;
+
+                gerarEstatisticasCasaisCSVVazio(pasta);
+                gerarRelatorioPrestadoresVazio(pasta);
+                gerarRelatorioPlanejamentoVazio(pasta);
+                throw runtime_error("Erro de I/O");
+            }
+        }
+    }
+
+    for (size_t i = 0; i < casamentos.size(); i++) {
+        for (size_t j = i + 1; j < casamentos.size(); j++) {
+            if (casamentos[i].getIdCasamento() == casamentos[j].getIdCasamento()) {
+                cout << "ID repetido: " << casamentos[i].getIdCasamento() << " na classe Casamento" << endl;
+
+                gerarEstatisticasCasaisCSVVazio(pasta);
+                gerarRelatorioPrestadoresVazio(pasta);
+                gerarRelatorioPlanejamentoVazio(pasta);
+                throw runtime_error("Erro de I/O");
+            }
+        }
+    }
+
+    for (size_t i = 0; i < festas.size(); i++) {
+        for (size_t j = i + 1; j < festas.size(); j++) {
+            if (festas[i].getId() == festas[j].getId()) {
+                cout << "ID repetido: " << festas[i].getId() << " na classe Festa" << endl;
+                gerarEstatisticasCasaisCSVVazio(pasta);
+                gerarRelatorioPrestadoresVazio(pasta);
+                gerarRelatorioPlanejamentoVazio(pasta);
+                throw runtime_error("Erro de I/O");
+            }
+        }
+    }
+
+    for (size_t i = 0; i < compras.size(); i++) {
+        for (size_t j = i + 1; j < compras.size(); j++) {
+            if (compras[i].getId() == compras[j].getId()) {
+                cout << "ID repetido: " << compras[i].getId() << " na classe Compra" << endl;
+                gerarEstatisticasCasaisCSVVazio(pasta);
+                gerarRelatorioPrestadoresVazio(pasta);
+                gerarRelatorioPlanejamentoVazio(pasta);
+                throw runtime_error("Erro de I/O");
+            }
         }
     }
 }
@@ -1159,7 +1446,9 @@ void verificaCompraLoja(const vector<Pessoa*>& pessoas, const vector<Compra>& co
 void executarVerificacoes(const vector<Pessoa*>& pessoas, const vector<Lar>& lares,
                           const vector<Tarefa>& tarefas, const vector<Casamento>& casamentos,
                           const vector<Festa>& festas, const vector<Compra>& compras) {
-    // verificaIdRepetido(pessoas, lares, tarefas, casamentos, festas, compras);
+    verificaIdRepetido(pessoas, lares, tarefas, casamentos, festas, compras);
+
+
     verificaCPFRepetido(pessoas);
     verificaCNPJ(pessoas);
     verificaLar(pessoas, lares);
@@ -1181,14 +1470,13 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    string folderPath = argv[1];
+    pasta = argv[1];
 
-    if (!fs::exists(folderPath) || !fs::is_directory(folderPath)) {
-        cerr << "Invalid folder path: " << folderPath << endl;
+    if (!fs::exists(pasta) || !fs::is_directory(pasta)) {
+        cerr << "Invalid folder path: " << pasta << endl;
         return 1;
     }
 
-    // Declare vectors in the main function
     vector<Pessoa*> list_pessoa;
     vector<Festa> list_festa;
     vector<Casamento> list_casamento;
@@ -1196,13 +1484,16 @@ int main(int argc, char* argv[]) {
     vector<Tarefa> list_tarefa;
     vector<Compra> list_compra;
 
-    // Iterate through all files in the folder
-    for (const auto& entry : fs::directory_iterator(folderPath)) {
+    for (const auto& entry : fs::directory_iterator(pasta)) {
         if (entry.is_regular_file() && entry.path().extension() == ".csv") {
-            cout << "Processing file: " << entry.path() << endl;
             processCSVFile(entry.path().string(), list_pessoa, list_festa, list_casamento, list_lar, list_tarefa, list_compra);
         }
     }
+
+    // if (list_pessoa.empty()){
+    //     throw runtime_error("Erro de I/O");
+    // }else if (list_festa.empty)
+
 
 
     vector<string> paresCpf;
@@ -1214,16 +1505,15 @@ int main(int argc, char* argv[]) {
 
     map<Casal, int> festasConvidados;
 
-    reiniciarArquivoPlanejamento(folderPath);
-
+    reiniciarArquivoPlanejamento(pasta);
 
     executarVerificacoes(list_pessoa, list_lar, list_tarefa, list_casamento, list_festa, list_compra);
 
-    process_files(list_pessoa, list_lar, list_tarefa, list_casamento, list_festa, list_compra, paresCpf, casais, gastos, festasConvidados, folderPath);
+    process_files(list_pessoa, list_lar, list_tarefa, list_casamento, list_festa, list_compra, paresCpf, casais, gastos, festasConvidados, pasta);
 
-    gerarRelatorioPrestadores(list_pessoa, list_tarefa, list_compra, folderPath);
+    gerarRelatorioPrestadores(list_pessoa, list_tarefa, list_compra, pasta);
 
-    gerarEstatisticasCasaisCSV(casais, gastos, festasConvidados, folderPath);
+    gerarEstatisticasCasaisCSV(casais, gastos, festasConvidados, pasta);
 
     return 0;
 }

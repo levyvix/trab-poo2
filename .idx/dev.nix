@@ -11,6 +11,7 @@
     # pkgs.nodejs_20
     # pkgs.nodePackages.nodemon
     pkgs.gcc
+    pkgs.gnumake
  
   ];
   # Sets environment variables in the workspace
